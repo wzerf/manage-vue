@@ -3,6 +3,9 @@ import { unmountGlobalLoading } from '@vben/utils';
 
 import { overridesPreferences } from './preferences';
 
+// 注册 ALTCHA PoW widget 自定义元素（<altcha-widget>）供登录页人机校验
+import 'altcha';
+
 /**
  * 应用初始化完成之后再进行页面加载渲染
  */

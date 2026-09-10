@@ -38,6 +38,7 @@ const [Form, { resetForm, validate, getValues, getFieldComponentRef }] =
         {
           component: 'VbenInputPassword' as const,
           componentProps: {
+            autocomplete: 'current-password',
             placeholder: $t('ui.widgets.lockScreen.placeholder'),
           },
           fieldName: 'lockScreenPassword',

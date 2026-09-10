@@ -1,3 +1,5 @@
+import { useAccessStore } from '@vben/stores';
+
 import { baseRequestClient, requestClient } from '#/api/request';
 
 export namespace AuthApi {
@@ -5,11 +7,18 @@ export namespace AuthApi {
   export interface LoginParams {
     password?: string;
     username?: string;
+    altcha?: string;
   }
 
-  /** 登录接口返回值 */
+  /** 登录接口返回值（sa-token 单 token + 用户摘要 + 会话专属公钥） */
   export interface LoginResult {
     accessToken: string;
+    id?: number | string;
+    username?: string;
+    realName?: string;
+    roles?: string[];
+    homePath?: string;
+    publicKey?: string;
   }
 
   export interface RefreshTokenResult {
@@ -40,9 +49,14 @@ export async function refreshTokenApi() {
 
 /**
  * 退出登录
+ *
+ * 必须走 baseRequestClient（无 401 重认证拦截器）。
  */
 export async function logoutApi() {
+  const accessStore = useAccessStore();
+  const token = accessStore.accessToken;
   return baseRequestClient.post('/auth/logout', undefined, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
     withCredentials: true,
   });
 }

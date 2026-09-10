@@ -1,69 +1,41 @@
 <script lang="ts" setup>
 import type { VbenFormSchema } from '@vben/common-ui';
-import type { BasicOption } from '@vben/types';
+import type { Recordable } from '@vben/types';
 
-import { computed, markRaw } from 'vue';
+import { computed, markRaw, onMounted, ref } from 'vue';
 
-import { AuthenticationLogin, SliderCaptcha, z } from '@vben/common-ui';
+import { AuthenticationLogin, z } from '@vben/common-ui';
+import { useAppConfig } from '@vben/hooks';
 import { $t } from '@vben/locales';
 
+import { prepareGlobalPublicKey } from '#/api/security';
+import AltchaWidget from '#/components/AltchaWidget.vue';
 import { useAuthStore } from '#/store';
 
 defineOptions({ name: 'Login' });
 
+const { apiURL } = useAppConfig(import.meta.env, import.meta.env.PROD);
 const authStore = useAuthStore();
 
-const MOCK_USER_OPTIONS: BasicOption[] = [
-  {
-    label: 'Super',
-    value: 'vben',
-  },
-  {
-    label: 'Admin',
-    value: 'admin',
-  },
-  {
-    label: 'User',
-    value: 'jack',
-  },
-];
+onMounted(() => {
+  void prepareGlobalPublicKey(apiURL || '/api');
+});
+const loginRef = ref<null | {
+  getFormApi: () => {
+    getFieldComponentRef?: (
+      field: string,
+    ) => undefined | { reset?: () => void };
+    setFieldValue?: (field: string, value: unknown) => void;
+  };
+}>(null);
 
 const formSchema = computed((): VbenFormSchema[] => {
   return [
     {
-      component: 'VbenSelect',
-      componentProps: {
-        options: MOCK_USER_OPTIONS,
-        placeholder: $t('authentication.selectAccount'),
-      },
-      fieldName: 'selectAccount',
-      label: $t('authentication.selectAccount'),
-      rules: z
-        .string()
-        .min(1, { message: $t('authentication.selectAccount') })
-        .optional()
-        .default('vben'),
-    },
-    {
       component: 'VbenInput',
       componentProps: {
+        autocomplete: 'username',
         placeholder: $t('authentication.usernameTip'),
-      },
-      dependencies: {
-        trigger(values, form) {
-          if (values.selectAccount) {
-            const findUser = MOCK_USER_OPTIONS.find(
-              (item) => item.value === values.selectAccount,
-            );
-            if (findUser) {
-              form.setValues({
-                password: '123456',
-                username: findUser.value,
-              });
-            }
-          }
-        },
-        triggerFields: ['selectAccount'],
       },
       fieldName: 'username',
       label: $t('authentication.username'),
@@ -72,6 +44,7 @@ const formSchema = computed((): VbenFormSchema[] => {
     {
       component: 'VbenInputPassword',
       componentProps: {
+        autocomplete: 'current-password',
         placeholder: $t('authentication.password'),
       },
       fieldName: 'password',
@@ -79,20 +52,42 @@ const formSchema = computed((): VbenFormSchema[] => {
       rules: z.string().min(1, { message: $t('authentication.passwordTip') }),
     },
     {
-      component: markRaw(SliderCaptcha),
-      fieldName: 'captcha',
-      rules: z.boolean().refine((value) => value, {
+      component: markRaw(AltchaWidget),
+      componentProps: {
+        language: 'zh',
+      },
+      fieldName: 'altcha',
+      rules: z.string().min(1, {
         message: $t('authentication.verifyRequiredTip'),
       }),
     },
   ];
 });
+
+function resetAltcha() {
+  const formApi = loginRef.value?.getFormApi?.();
+  if (!formApi) return;
+  formApi.setFieldValue?.('altcha', '');
+  const altchaComp = formApi.getFieldComponentRef?.('altcha') as
+    | undefined
+    | { reset?: () => void };
+  altchaComp?.reset?.();
+}
+
+async function handleLogin(values: Recordable<any>) {
+  try {
+    await authStore.authLogin(values);
+  } catch {
+    resetAltcha();
+  }
+}
 </script>
 
 <template>
   <AuthenticationLogin
+    ref="loginRef"
     :form-schema="formSchema"
     :loading="authStore.loginLoading"
-    @submit="authStore.authLogin"
+    @submit="handleLogin"
   />
 </template>

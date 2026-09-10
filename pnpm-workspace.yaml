@@ -11,7 +11,6 @@ packages:
   - apps/*
   - scripts/*
   - docs
-  - playground
 
 publicHoistPattern:
   - lefthook
@@ -137,9 +136,11 @@ catalog:
   globals: ^17.7.0
   h3: ^1.15.11
   happy-dom: ^20.11.6
+  altcha: 3.2.1
   html-minifier-terser: ^7.2.0
   is-ci: ^4.1.0
   json-bigint: ^1.0.0
+  jszip: ^3.10.1
   jsonwebtoken: ^9.0.3
   knip: ^6.29.0
   lefthook: ^2.1.10

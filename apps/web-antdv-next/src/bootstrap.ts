@@ -14,6 +14,7 @@ import { $t, setupI18n } from '#/locales';
 import { initComponentAdapter } from './adapter/component';
 import { initSetupVbenForm } from './adapter/form';
 import App from './app.vue';
+import { setupVueQuery } from './query';
 import { router } from './router';
 
 async function bootstrap(namespace: string) {
@@ -33,6 +34,7 @@ async function bootstrap(namespace: string) {
   // });
 
   const app = createApp(App);
+  setupVueQuery(app);
 
   // 注册v-loading指令
   registerLoadingDirective(app, {

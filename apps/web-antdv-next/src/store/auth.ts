@@ -4,6 +4,7 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { LOGIN_PATH } from '@vben/constants';
+import { useAppConfig } from '@vben/hooks';
 import { preferences } from '@vben/preferences';
 import { resetAllStores, useAccessStore, useUserStore } from '@vben/stores';
 
@@ -11,7 +12,15 @@ import { notification } from 'antdv-next';
 import { defineStore } from 'pinia';
 
 import { getAccessCodesApi, getUserInfoApi, loginApi, logoutApi } from '#/api';
+import {
+  clearCachedPublicKey,
+  prepareGlobalPublicKey,
+  setCachedPublicKey,
+} from '#/api/security';
 import { $t } from '#/locales';
+import { clearAccessMenusCache } from '#/utils/menu-cache';
+
+const { apiURL } = useAppConfig(import.meta.env, import.meta.env.PROD);
 
 export const useAuthStore = defineStore('auth', () => {
   const accessStore = useAccessStore();
@@ -20,26 +29,22 @@ export const useAuthStore = defineStore('auth', () => {
 
   const loginLoading = ref(false);
 
-  /**
-   * 异步处理登录操作
-   * Asynchronously handle the login process
-   * @param params 登录表单数据
-   */
   async function authLogin(
     params: Recordable<any>,
     onSuccess?: () => Promise<void> | void,
   ) {
-    // 异步处理用户登录操作并获取 accessToken
     let userInfo: null | UserInfo = null;
     try {
       loginLoading.value = true;
-      const { accessToken } = await loginApi(params);
+      await prepareGlobalPublicKey(apiURL || '/api');
+      const { accessToken, publicKey } = await loginApi(params);
 
-      // 如果成功获取到 accessToken
       if (accessToken) {
         accessStore.setAccessToken(accessToken);
+        if (publicKey) {
+          setCachedPublicKey(publicKey);
+        }
 
-        // 获取用户信息并存储到 accessStore 中
         const [fetchUserInfoResult, accessCodes] = await Promise.all([
           fetchUserInfo(),
           getAccessCodesApi(),
@@ -77,16 +82,22 @@ export const useAuthStore = defineStore('auth', () => {
     };
   }
 
-  async function logout(redirect: boolean = true) {
-    try {
-      await logoutApi();
-    } catch {
-      // 不做任何处理
+  async function logout(
+    redirect: boolean = true,
+    options: { skipApi?: boolean } = {},
+  ) {
+    if (!options.skipApi) {
+      try {
+        await logoutApi();
+      } catch {
+        // 服务端登出失败不影响本地清理
+      }
     }
     resetAllStores();
     accessStore.setLoginExpired(false);
+    clearAccessMenusCache();
+    clearCachedPublicKey();
 
-    // 回登录页带上当前路由地址
     await router.replace({
       path: LOGIN_PATH,
       query: redirect

@@ -60,8 +60,12 @@ interface PrintPluginOptions {
  */
 interface NitroMockPluginOptions {
   /**
-   * Mock 服务器包名
-   * @default '@vbenjs/nitro-mock'
+   * Mock 服务器来源
+   * @description 支持三种形式：
+   *   - 包名（任意 workspace 包）：在 workspace 内查找
+   *   - 绝对/相对路径（/abs、./、../）：直接作为 nitro rootDir
+   *   - $/xxx：解析为 <外层 monorepo 根>/xxx
+   * @default '$/apps/manage/mock'
    */
   mockServerPackage?: string;
 

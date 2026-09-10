@@ -1,7 +1,6 @@
-/**
- * 该文件可自行根据业务逻辑进行调整
- */
 import type { RequestClientOptions } from '@vben/request';
+
+import type { RequestSecurityDeps } from '#/api/security';
 
 import { useAppConfig } from '@vben/hooks';
 import { preferences } from '@vben/preferences';
@@ -15,39 +14,177 @@ import { useAccessStore } from '@vben/stores';
 
 import { message } from 'antdv-next';
 
+import {
+  applyRequestSecurity,
+  clearCachedPublicKey,
+  decryptResponseData,
+  ensurePublicKey,
+  getPublicCryptoKey,
+  getSecurityFlags,
+  isRequestKeyFailedCode,
+  isResponseEncrypted,
+  pickStringHeader,
+  shouldSkipReAuthForKeyFailure,
+} from '#/api/security';
 import { useAuthStore } from '#/store';
+import {
+  aesDecrypt,
+  aesEncrypt,
+  generateAesKey,
+  rsaEncrypt,
+} from '#/utils/crypto';
+import { clearAccessMenusCache } from '#/utils/menu-cache';
 
 import { refreshTokenApi } from './core';
 
 const { apiURL } = useAppConfig(import.meta.env, import.meta.env.PROD);
+const resolvedApiURL = apiURL || '/api';
+
+type AxiosConfigLike = {
+  _aesKey?: CryptoKey | null;
+  baseURL?: string;
+  data?: unknown;
+  headers?: Record<string, unknown>;
+  meta?: { skipEncrypt?: boolean };
+  method?: string;
+  params?: Record<string, unknown> | string | URLSearchParams;
+  responseType?: string;
+  transformRequest?: unknown;
+  url?: string;
+};
+
+function createSecurityDeps(): RequestSecurityDeps {
+  return {
+    aesEncrypt,
+    aesDecrypt,
+    generateAesKey,
+    rsaEncrypt,
+    ensurePublicKey: () => ensurePublicKey(resolvedApiURL),
+    getPublicCryptoKey,
+  };
+}
+
+function attachSecurityInterceptors(client: RequestClient) {
+  const deps = createSecurityDeps();
+
+  client.addRequestInterceptor({
+    fulfilled: async (config) => {
+      const cfg = config as AxiosConfigLike;
+      const flags = getSecurityFlags();
+      const contentType = pickStringHeader(cfg.headers, [
+        'Content-Type',
+        'content-type',
+      ]);
+
+      const secured = await applyRequestSecurity(
+        {
+          baseURL: cfg.baseURL ?? resolvedApiURL,
+          data: cfg.data,
+          headers: cfg.headers as Record<string, unknown> | undefined,
+          method: cfg.method,
+          params: cfg.params,
+          meta: cfg.meta,
+          url: cfg.url,
+          contentType,
+          language: preferences.app.locale,
+        },
+        flags,
+        deps,
+      );
+
+      cfg.headers = secured.headers as typeof cfg.headers;
+      cfg.data = secured.data;
+      cfg._aesKey = secured.aesKey ?? null;
+
+      if (secured.responseType) {
+        cfg.responseType = secured.responseType;
+      }
+      if (secured.rawBody) {
+        cfg.transformRequest = [(data: unknown) => data];
+        if (cfg.headers) {
+          cfg.headers['Content-Type'] = 'application/json';
+        }
+      }
+
+      return config;
+    },
+  });
+
+  client.addResponseInterceptor({
+    fulfilled: async (response) => {
+      const cfg = response.config as AxiosConfigLike;
+      const decrypted = await decryptResponseData(
+        {
+          data: response.data,
+          isEncrypted: isResponseEncrypted(
+            response.headers as Record<string, unknown>,
+          ),
+          aesKey: cfg._aesKey,
+        },
+        deps,
+      );
+      response.data = decrypted;
+      return response;
+    },
+    rejected: async (error: unknown) => {
+      const err = error as {
+        response?: {
+          config?: AxiosConfigLike;
+          data?: unknown;
+          headers?: Record<string, unknown>;
+        };
+      };
+      if (err?.response) {
+        const cfg = err.response.config;
+        err.response.data = await decryptResponseData(
+          {
+            data: err.response.data,
+            isEncrypted: isResponseEncrypted(err.response.headers),
+            aesKey: cfg?._aesKey,
+          },
+          deps,
+        );
+      }
+      throw error;
+    },
+  });
+}
 
 function createRequestClient(baseURL: string, options?: RequestClientOptions) {
   const client = new RequestClient({
     ...options,
     baseURL,
+    paramsSerializer: options?.paramsSerializer ?? 'repeat',
   });
 
-  /**
-   * 重新认证逻辑
-   */
-  async function doReAuthenticate() {
-    console.warn('Access token or refresh token is invalid or expired. ');
-    const accessStore = useAccessStore();
-    const authStore = useAuthStore();
-    accessStore.setAccessToken(null);
-    if (
-      preferences.app.loginExpiredMode === 'modal' &&
-      accessStore.isAccessChecked
-    ) {
-      accessStore.setLoginExpired(true);
-    } else {
-      await authStore.logout();
+  let reAuthPromise: null | Promise<void> = null;
+  async function doReAuthenticate(
+    reason = 'Access token is invalid or expired.',
+  ) {
+    if (reAuthPromise) {
+      return reAuthPromise;
     }
+    reAuthPromise = (async () => {
+      console.warn(reason);
+      const accessStore = useAccessStore();
+      const authStore = useAuthStore();
+      accessStore.setAccessToken(null);
+      clearAccessMenusCache();
+      clearCachedPublicKey();
+      if (
+        preferences.app.loginExpiredMode === 'modal' &&
+        accessStore.isAccessChecked
+      ) {
+        accessStore.setLoginExpired(true);
+      } else {
+        await authStore.logout(true, { skipApi: true });
+      }
+    })().finally(() => {
+      reAuthPromise = null;
+    });
+    return reAuthPromise;
   }
 
-  /**
-   * 刷新token逻辑
-   */
   async function doRefreshToken() {
     const accessStore = useAccessStore();
     const resp = await refreshTokenApi();
@@ -60,18 +197,19 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
     return token ? `Bearer ${token}` : null;
   }
 
-  // 请求头处理
   client.addRequestInterceptor({
     fulfilled: async (config) => {
-      const accessStore = useAccessStore();
-
-      config.headers.Authorization = formatToken(accessStore.accessToken);
+      if (!config.url?.startsWith('/public/')) {
+        const accessStore = useAccessStore();
+        config.headers.Authorization = formatToken(accessStore.accessToken);
+      }
       config.headers['Accept-Language'] = preferences.app.locale;
       return config;
     },
   });
 
-  // 处理返回的响应数据格式
+  attachSecurityInterceptors(client);
+
   client.addResponseInterceptor(
     defaultResponseInterceptor({
       codeField: 'code',
@@ -80,25 +218,63 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
     }),
   );
 
-  // token过期的处理
+  client.addResponseInterceptor({
+    rejected: async (error: unknown) => {
+      const err = error as {
+        __handledByAuthInterceptor?: boolean;
+        config?: { url?: string };
+        data?: { code?: unknown; message?: string; msg?: string };
+        response?: {
+          config?: { url?: string };
+          data?: { code?: unknown; message?: string; msg?: string };
+        };
+      };
+      const payload = err?.response?.data ?? err?.data ?? {};
+      const requestUrl = String(
+        err?.config?.url ?? err?.response?.config?.url ?? '',
+      );
+      if (
+        isRequestKeyFailedCode(payload?.code) &&
+        !shouldSkipReAuthForKeyFailure(requestUrl)
+      ) {
+        const errMsg =
+          (typeof payload?.msg === 'string' && payload.msg) ||
+          (typeof payload?.message === 'string' && payload.message) ||
+          '密钥错误';
+        message.error(errMsg);
+        await doReAuthenticate(
+          'Request key failed (1006), redirecting to login...',
+        );
+        throw Object.assign(error as object, {
+          __handledByAuthInterceptor: true,
+        });
+      }
+      throw error;
+    },
+  });
+
   client.addResponseInterceptor(
     authenticateResponseInterceptor({
       client,
-      doReAuthenticate,
+      doReAuthenticate: () => doReAuthenticate(),
       doRefreshToken,
       enableRefreshToken: preferences.app.enableRefreshToken,
       formatToken,
     }),
   );
 
-  // 通用的错误处理,如果没有进入上面的错误处理逻辑，就会进入这里
   client.addResponseInterceptor(
     errorMessageResponseInterceptor((msg: string, error) => {
-      // 这里可以根据业务进行定制,你可以拿到 error 内的信息进行定制化处理，根据不同的 code 做不同的提示，而不是直接使用 message.error 提示 msg
-      // 当前mock接口返回的错误字段是 error 或者 message
-      const responseData = error?.response?.data ?? {};
-      const errorMessage = responseData?.error ?? responseData?.message ?? '';
-      // 如果没有错误信息，则会根据状态码进行提示
+      if (
+        error &&
+        typeof error === 'object' &&
+        '__handledByAuthInterceptor' in error
+      ) {
+        return;
+      }
+      const responseData = error?.response?.data ?? error ?? {};
+      const errorMessage =
+        responseData?.msg ?? responseData?.message ?? responseData?.error ?? '';
       message.error(errorMessage || msg);
     }),
   );
@@ -106,8 +282,18 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
   return client;
 }
 
-export const requestClient = createRequestClient(apiURL, {
+export const requestClient = createRequestClient(resolvedApiURL, {
   responseReturn: 'data',
 });
 
-export const baseRequestClient = new RequestClient({ baseURL: apiURL });
+export const baseRequestClient = new RequestClient({
+  baseURL: resolvedApiURL,
+  paramsSerializer: 'repeat',
+});
+attachSecurityInterceptors(baseRequestClient);
+
+export interface PageFetchParams {
+  [key: string]: any;
+  pageNo?: number;
+  pageSize?: number;
+}

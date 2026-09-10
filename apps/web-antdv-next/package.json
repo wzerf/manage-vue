@@ -40,9 +40,12 @@
     "@vben/styles": "workspace:*",
     "@vben/types": "workspace:*",
     "@vben/utils": "workspace:*",
+    "@tanstack/vue-query": "catalog:",
     "@vueuse/core": "catalog:",
     "antdv-next": "catalog:",
+    "altcha": "3.2.1",
     "dayjs": "catalog:",
+    "jszip": "catalog:",
     "pinia": "catalog:",
     "vue": "catalog:",
     "vue-router": "catalog:"
