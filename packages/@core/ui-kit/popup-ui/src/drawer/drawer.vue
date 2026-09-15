@@ -43,7 +43,8 @@ interface Props extends DrawerProps {
 const props = withDefaults(defineProps<Props>(), {
   appendToMain: false,
   closeIconPlacement: 'right',
-  destroyOnClose: false,
+  destroyOnClose: undefined,
+  destroyOnHidden: undefined,
   drawerApi: undefined,
   submitting: false,
   zIndex: 1000,
@@ -74,6 +75,7 @@ const {
   contentClass,
   description,
   destroyOnClose,
+  destroyOnHidden,
   footer: showFooter,
   footerClass,
   header: showHeader,
@@ -171,8 +173,11 @@ function handleClosed() {
   isClosed.value = true;
   props.drawerApi?.onClosed();
 }
+const destroyOnHiddenResolved = computed(
+  () => destroyOnHidden.value ?? destroyOnClose.value ?? false,
+);
 const getForceMount = computed(() => {
-  return !unref(destroyOnClose) && unref(hasOpened);
+  return !unref(destroyOnHiddenResolved) && unref(hasOpened);
 });
 </script>
 <template>

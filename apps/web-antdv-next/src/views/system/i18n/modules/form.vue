@@ -148,7 +148,7 @@ const drawerTitle = computed(() => (isEdit.value ? '编辑语言' : '新建语�
 </script>
 
 <template>
-  <Drawer :title="drawerTitle" :width="560" :destroy-on-close="true">
+  <Drawer :title="drawerTitle" :width="560" :destroy-on-hidden="true">
     <div v-if="props.kind === 'locale'" class="flex flex-col">
       <!-- 语种名称 -->
       <div class="mb-4">

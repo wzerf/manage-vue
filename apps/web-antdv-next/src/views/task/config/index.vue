@@ -36,7 +36,7 @@ const rowLoadingId = ref<null | number>(null);
 
 const [FormDrawer, formDrawerApi] = useVbenDrawer({
   connectedComponent: ConfigForm,
-  destroyOnClose: true,
+  destroyOnHidden: true,
 });
 
 function clearSelection() {

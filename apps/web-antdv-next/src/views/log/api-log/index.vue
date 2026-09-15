@@ -21,7 +21,7 @@ const source = ref<ApiLogSource>('hot');
 
 const [DetailDrawer, detailDrawerApi] = useVbenDrawer({
   connectedComponent: ApiLogDetail,
-  destroyOnClose: true,
+  destroyOnHidden: true,
 });
 
 function openDetail(row: ApiLogListItem) {

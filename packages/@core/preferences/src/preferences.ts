@@ -141,9 +141,19 @@ class PreferenceManager {
     // 在每次 updatePreferences 时被 concat 追加，膨胀到几十/上百条重复 key。
     // 这里在加载缓存后做一次去重，保留首次出现的 key。
     this.sanitizeCachedArray(cachedPreferences, 'widget', 'order');
+    // 环境变量强制覆盖：当 VITE_ACCESS_MODE 显式设置时，忽略旧缓存中的 accessMode，
+    // 否则已持久化的 frontend 会一直覆盖新的 backend 默认，导致动态菜单永不拉取。
+    const envAccessMode = (import.meta.env.VITE_ACCESS_MODE ?? '').trim();
+    const hasEnvAccessMode =
+      envAccessMode === 'backend' ||
+      envAccessMode === 'frontend' ||
+      envAccessMode === 'mixed';
+    if (hasEnvAccessMode && (cachedPreferences as any)?.app?.accessMode) {
+      delete (cachedPreferences as any).app.accessMode;
+    }
     const mergedPreference = mergeWithArrayOverride(
       {},
-      cachedPreferences, // 用户缓存的设置优先
+      cachedPreferences, // 用户缓存的设置优先（已剔除 accessMode）
       this.initialPreferences, // 初始设置仅补齐缺失字段
     );
 

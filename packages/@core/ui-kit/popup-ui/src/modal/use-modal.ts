@@ -146,7 +146,11 @@ export function useVbenModal<
   const onClosed = mergedOptions.onClosed;
   mergedOptions.onClosed = () => {
     onClosed?.();
-    if (mergedOptions.destroyOnClose && !isConsumed) {
+    if (
+      (mergedOptions.destroyOnHidden ??
+        (mergedOptions as Record<string, unknown>).destroyOnClose) &&
+      !isConsumed
+    ) {
       if (injectData.consumed !== undefined) {
         injectData.consumed = false;
       }

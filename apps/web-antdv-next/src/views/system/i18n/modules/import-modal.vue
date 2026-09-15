@@ -482,7 +482,7 @@ function handleClose() {
     title="导入 JSON"
     :open="props.open"
     :width="1200"
-    :destroy-on-close="true"
+    :destroy-on-hidden="true"
     :footer="null"
     :mask-closable="false"
     @cancel="handleClose"

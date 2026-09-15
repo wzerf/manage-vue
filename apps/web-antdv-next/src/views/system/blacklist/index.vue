@@ -40,7 +40,7 @@ const BULK_SUCCESS_KEY: Record<BulkAction, string> = {
 
 const [FormDrawer, formDrawerApi] = useVbenDrawer({
   connectedComponent: BlacklistForm,
-  destroyOnClose: true,
+  destroyOnHidden: true,
 });
 
 const selectedIds = ref<Set<number>>(new Set());

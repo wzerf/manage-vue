@@ -39,7 +39,8 @@ interface Props extends ModalProps {
 
 const props = withDefaults(defineProps<Props>(), {
   appendToMain: false,
-  destroyOnClose: false,
+  destroyOnClose: undefined,
+  destroyOnHidden: undefined,
   modalApi: undefined,
 });
 
@@ -75,6 +76,7 @@ const {
   contentClass,
   description,
   destroyOnClose,
+  destroyOnHidden,
   draggable,
   overflow,
   footer: showFooter,
@@ -213,8 +215,11 @@ function handleCloseAutoFocus(_e: Event) {
   // allow reka-ui to return focus to the trigger element on close
 }
 
+const destroyOnHiddenResolved = computed(
+  () => destroyOnHidden.value ?? destroyOnClose.value ?? false,
+);
 const getForceMount = computed(() => {
-  return !unref(destroyOnClose) && unref(firstOpened);
+  return !unref(destroyOnHiddenResolved) && unref(firstOpened);
 });
 
 const handleOpened = () => {

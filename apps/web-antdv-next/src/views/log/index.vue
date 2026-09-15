@@ -147,7 +147,7 @@ onBeforeUnmount(() => {
             v-if="activeKey === tab.key && panelLoading"
             class="log-tab-panel__loading"
           >
-            <Spin tip="加载中..." />
+            <Spin description="加载中..." />
           </div>
           <div
             :class="{

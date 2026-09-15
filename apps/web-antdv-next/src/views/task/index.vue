@@ -153,7 +153,7 @@ onBeforeUnmount(() => {
             v-if="activeKey === tab.key && panelLoading"
             class="task-tab-panel__loading"
           >
-            <Spin :tip="$t('task.config.loading')" />
+            <Spin :description="$t('task.config.loading')" />
           </div>
           <div
             :class="{

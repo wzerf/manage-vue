@@ -74,7 +74,7 @@ const exportModalOpen = ref(false);
 
 const [LocaleFormDrawer, localeFormDrawerApi] = useVbenDrawer({
   connectedComponent: Form,
-  destroyOnClose: true,
+  destroyOnHidden: true,
 });
 
 // 翻译多语抽屉：TranslationKeyDrawer 自己持有 useVbenDrawer + props 直传,
@@ -834,7 +834,7 @@ function formatUpdatedAt(value: string | undefined): string {
       v-model:open="exportModalOpen"
       title="导出 JSON"
       :width="400"
-      :destroy-on-close="true"
+      :destroy-on-hidden="true"
       ok-text="导出"
       cancel-text="取消"
       @ok="confirmExport"

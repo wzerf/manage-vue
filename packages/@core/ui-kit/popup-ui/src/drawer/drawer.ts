@@ -54,8 +54,14 @@ export interface DrawerProps {
   description?: string;
   /**
    * 在关闭时销毁抽屉
+   * @deprecated 请使用 destroyOnHidden
    */
   destroyOnClose?: boolean;
+  /**
+   * 在关闭时销毁抽屉
+   * @since 5.25.0 对齐 antd destroyOnHidden
+   */
+  destroyOnHidden?: boolean;
   /**
    * 是否显示底部
    * @default true

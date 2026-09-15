@@ -25,7 +25,7 @@ defineOptions({ name: 'SystemApi' });
 
 const [FormDrawer, formDrawerApi] = useVbenDrawer({
   connectedComponent: ApiForm,
-  destroyOnClose: true,
+  destroyOnHidden: true,
 });
 
 const drawerData = ref<{ row?: SysApi }>({});

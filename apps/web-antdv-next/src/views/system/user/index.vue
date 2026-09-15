@@ -18,12 +18,12 @@ defineOptions({ name: 'SystemUser' });
 
 const [FormDrawer, formDrawerApi] = useVbenDrawer({
   connectedComponent: UserForm,
-  destroyOnClose: true,
+  destroyOnHidden: true,
 });
 
 const [ResetDrawer, resetDrawerApi] = useVbenDrawer({
   connectedComponent: ResetPassword,
-  destroyOnClose: true,
+  destroyOnHidden: true,
 });
 
 // 编辑态传递给抽屉的数据

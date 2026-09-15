@@ -67,8 +67,14 @@ export interface ModalProps {
   description?: string;
   /**
    * 在关闭时销毁弹窗
+   * @deprecated 请使用 destroyOnHidden
    */
   destroyOnClose?: boolean;
+  /**
+   * 在关闭时销毁弹窗
+   * @since 5.25.0  对齐 antd destroyOnHidden
+   */
+  destroyOnHidden?: boolean;
   /**
    * 是否可拖拽
    * @default false

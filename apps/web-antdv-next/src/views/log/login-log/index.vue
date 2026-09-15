@@ -21,7 +21,7 @@ const source = ref<LoginLogSource>('hot');
 
 const [DetailDrawer, detailDrawerApi] = useVbenDrawer({
   connectedComponent: LoginLogDetail,
-  destroyOnClose: true,
+  destroyOnHidden: true,
 });
 
 function openDetail(row: LoginLogListItem) {

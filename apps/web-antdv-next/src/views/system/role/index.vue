@@ -18,12 +18,12 @@ defineOptions({ name: 'SystemRole' });
 
 const [FormDrawer, formDrawerApi] = useVbenDrawer({
   connectedComponent: RoleForm,
-  destroyOnClose: true,
+  destroyOnHidden: true,
 });
 
 const [PermDrawer, permDrawerApi] = useVbenDrawer({
   connectedComponent: RolePermission,
-  destroyOnClose: true,
+  destroyOnHidden: true,
 });
 
 const drawerData = ref<{

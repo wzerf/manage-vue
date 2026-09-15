@@ -30,7 +30,7 @@ const configOptions = ref<Array<{ label: string; value: number }>>([]);
 
 const [DetailDrawer, detailDrawerApi] = useVbenDrawer({
   connectedComponent: ExecutionDetail,
-  destroyOnClose: true,
+  destroyOnHidden: true,
 });
 
 function openDetail(row: TaskExecution) {

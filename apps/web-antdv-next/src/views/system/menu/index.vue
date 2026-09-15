@@ -27,7 +27,7 @@ const router = useRouter();
 
 const [FormDrawer, formDrawerApi] = useVbenDrawer({
   connectedComponent: MenuForm,
-  destroyOnClose: true,
+  destroyOnHidden: true,
 });
 
 // 编辑态传递给抽屉的数据

@@ -75,12 +75,12 @@ const bulkLoading = ref({ type: false, data: false });
 // ============================================================
 const [TypeFormDrawer, typeFormDrawerApi] = useVbenDrawer({
   connectedComponent: Form,
-  destroyOnClose: true,
+  destroyOnHidden: true,
 });
 
 const [DataFormDrawer, dataFormDrawerApi] = useVbenDrawer({
   connectedComponent: Form,
-  destroyOnClose: true,
+  destroyOnHidden: true,
 });
 
 // ============================================================

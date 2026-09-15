@@ -44,7 +44,7 @@ export class ModalApi<TData = unknown> {
       confirmDisabled: false,
       confirmLoading: false,
       contentClass: '',
-      destroyOnClose: true,
+      destroyOnHidden: true,
       draggable: false,
       overflow: false,
       footer: true,
