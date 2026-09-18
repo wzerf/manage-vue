@@ -43,7 +43,7 @@
     "@tanstack/vue-query": "catalog:",
     "@vueuse/core": "catalog:",
     "antdv-next": "catalog:",
-    "altcha": "3.2.1",
+    "altcha": "3.2.2",
     "dayjs": "catalog:",
     "jszip": "catalog:",
     "pinia": "catalog:",
